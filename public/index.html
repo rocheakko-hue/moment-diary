@@ -282,6 +282,98 @@
     }
     .save-cta:active{opacity:.8}
 
+    /* ── MUSIC ── */
+    .music-wrap{display:none;margin-top:10px}
+    .music-wrap.show{display:block;animation:up .4s ease}
+
+    .music-loading{
+      text-align:center;padding:28px;
+      font-family:'Cormorant Garamond',serif;
+      font-size:1rem;font-style:italic;color:var(--muted);
+    }
+
+    .song-card{
+      background:var(--white);border-radius:18px;
+      padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.06);
+      margin-bottom:10px;cursor:pointer;
+      transition:transform .15s;
+    }
+    .song-card:active{transform:scale(0.98)}
+
+    .song-meta{
+      display:flex;align-items:center;gap:12px;
+      margin-bottom:12px;
+    }
+
+    .song-icon{
+      width:44px;height:44px;border-radius:10px;
+      background:var(--ink);color:var(--white);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.2rem;flex-shrink:0;
+    }
+
+    .song-info{}
+
+    .song-title{
+      font-family:'Cormorant Garamond',serif;
+      font-size:1.05rem;font-weight:600;color:var(--ink);
+    }
+
+    .song-artist{
+      font-size:0.75rem;color:var(--muted);
+      letter-spacing:.04em;margin-top:1px;
+    }
+
+    .song-connection{
+      font-size:0.72rem;color:var(--accent);
+      letter-spacing:.06em;text-transform:uppercase;
+      margin-bottom:8px;
+    }
+
+    .song-lyric{
+      font-family:'Cormorant Garamond',serif;
+      font-size:1.1rem;line-height:1.7;color:var(--ink2);
+      font-style:italic;
+      border-left:2px solid var(--accent);
+      padding-left:12px;margin-bottom:12px;
+    }
+
+    .translate-prompt{
+      font-size:0.75rem;color:var(--accent2);
+      letter-spacing:.06em;text-transform:uppercase;
+      margin-bottom:8px;
+    }
+
+    .translate-area{
+      width:100%;border:1px solid var(--border);
+      border-radius:10px;padding:12px 14px;
+      font-family:'Cormorant Garamond',serif;
+      font-size:1rem;color:var(--ink);
+      background:var(--bg);outline:none;
+      resize:none;min-height:70px;
+      transition:border-color .2s;
+    }
+    .translate-area:focus{border-color:var(--accent)}
+
+    .translate-btn{
+      width:100%;margin-top:8px;padding:12px;
+      background:var(--ink);color:var(--white);
+      border:none;border-radius:10px;
+      font-family:'Cormorant Garamond',serif;
+      font-size:0.95rem;letter-spacing:.06em;
+      cursor:pointer;transition:opacity .2s;
+    }
+    .translate-btn:active{opacity:.8}
+    .translate-btn:disabled{background:#ccc;cursor:not-allowed}
+
+    .translate-result{
+      margin-top:10px;padding:12px 14px;
+      background:#f5f0e8;border-radius:10px;
+      font-size:0.88rem;color:var(--ink2);
+      line-height:1.7;display:none;
+    }
+    .translate-result.show{display:block;animation:up .3s ease}
+
     /* ── DIARY ── */
     .diary-layout{
       max-width:540px;margin:0 auto;
@@ -438,6 +530,17 @@
         </div>
         <div class="encourage-box" id="encourage-box"></div>
         <button class="save-cta" onclick="saveDiary()">Save to my diary</button>
+      </div>
+
+      <!-- Music section -->
+      <div class="music-wrap" id="music-wrap">
+        <div class="rs">
+          <div class="rs-label">🎵 Today's Songs</div>
+          <div class="music-loading" id="music-loading">
+            <div class="loader"></div><br>Finding songs for you…
+          </div>
+          <div id="songs-list"></div>
+        </div>
       </div>
 
     </div>
@@ -620,6 +723,87 @@
     }
   }
 
+  async function fetchMusic(text) {
+    const wrap = document.getElementById('music-wrap');
+    const loading = document.getElementById('music-loading');
+    const list = document.getElementById('songs-list');
+    wrap.classList.add('show');
+    loading.style.display = 'block';
+    list.innerHTML = '';
+
+    try {
+      const res = await fetch('/api/music', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      loading.style.display = 'none';
+
+      const icons = ['🎵', '🎶', '🎸'];
+      list.innerHTML = (data.songs || []).map((song, i) => `
+        <div class="song-card" id="song-${i}">
+          <div class="song-meta">
+            <div class="song-icon">${icons[i]}</div>
+            <div class="song-info">
+              <div class="song-title">${song.title}</div>
+              <div class="song-artist">${song.artist}</div>
+            </div>
+          </div>
+          <div class="song-connection">${song.connection_ja}</div>
+          <div class="song-lyric">${song.lyric}</div>
+          <div class="translate-prompt">日本語に訳してみよう</div>
+          <textarea class="translate-area" id="ta-${i}"
+            placeholder="あなたの訳を書いてみて…" rows="2"></textarea>
+          <button class="translate-btn" onclick="checkTranslation(${i}, '${song.lyric.replace(/'/g, "\\'")}')">
+            訳を確認する
+          </button>
+          <div class="translate-result" id="tr-${i}"></div>
+        </div>
+      `).join('');
+    } catch (err) {
+      loading.style.display = 'none';
+      list.innerHTML = '<div style="color:#bbb;font-size:.85rem;padding:8px">曲の取得に失敗しました</div>';
+    }
+  }
+
+  async function checkTranslation(idx, lyric) {
+    const input = document.getElementById('ta-' + idx).value.trim();
+    if (!input) { showToast('訳を入力してください'); return; }
+
+    const btn = document.querySelector(`#song-${idx} .translate-btn`);
+    btn.disabled = true;
+    btn.textContent = '確認中…';
+
+    try {
+      const res = await fetch('/api/correct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: `Translate this English lyric to Japanese: "${lyric}"\nMy translation: "${input}"\nPlease respond in JSON with: {"feedback_ja": "フィードバック（日本語）", "natural_ja": "自然な日本語訳", "encouragement_ja": "励まし"}` })
+      });
+      const data = await res.json();
+
+      const resultEl = document.getElementById('tr-' + idx);
+      const feedback = data.corrected || '';
+      try {
+        const parsed = JSON.parse(data.corrected || '{}');
+        resultEl.innerHTML = `
+          <div style="margin-bottom:8px"><span style="color:var(--accent);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase">自然な訳</span><br>
+          <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem">${parsed.natural_ja || ''}</span></div>
+          <div style="font-size:.83rem;color:var(--ink2);margin-bottom:6px">${parsed.feedback_ja || ''}</div>
+          <div style="font-size:.82rem;color:var(--accent2)">${parsed.encouragement_ja || ''}</div>`;
+      } catch {
+        resultEl.textContent = feedback;
+      }
+      resultEl.classList.add('show');
+    } catch {
+      showToast('エラーが発生しました');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '訳を確認する';
+    }
+  }
+
   function renderResult(d) {
     document.getElementById('corrected-text').textContent = d.corrected;
 
@@ -647,6 +831,7 @@
     document.getElementById('encourage-box').textContent = d.encouragement_ja || '';
     document.getElementById('result-wrap').classList.add('show');
     document.getElementById('result-wrap').scrollIntoView({behavior:'smooth',block:'nearest'});
+    fetchMusic(document.getElementById('diary-input').value.trim());
   }
 
   // ── Save / Load (localStorage) ──

@@ -6,3 +6,8 @@
   from = "/api/correct"
   to = "/.netlify/functions/correct"
   status = 200
+
+[[redirects]]
+  from = "/api/music"
+  to = "/.netlify/functions/music"
+  status = 200
