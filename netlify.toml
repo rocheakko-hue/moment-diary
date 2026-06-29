@@ -11,3 +11,8 @@
   from = "/api/music"
   to = "/.netlify/functions/music"
   status = 200
+
+[[redirects]]
+  from = "/api/spotify-search"
+  to = "/.netlify/functions/spotify-search"
+  status = 200
