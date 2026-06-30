@@ -613,6 +613,18 @@
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
+  // グローバル公開
+  window.switchPage = (...a) => switchPage(...a);
+  window.triggerUpload = () => triggerUpload();
+  window.handlePhotos = (e) => handlePhotos(e);
+  window.removePhoto = (i) => removePhoto(i);
+  window.setFilter = (id) => setFilter(id);
+  window.submitDiary = () => submitDiary();
+  window.saveDiary = () => saveDiary();
+  window.fetchMusic = (t) => fetchMusic(t);
+  window.togglePreview = (i, u) => togglePreview(i, u);
+  window.checkTranslation = (i, l) => checkTranslation(i, l);
+
   // ── Filters ──
   const FILTERS = [
     {id:'none',  name:'Original', css:''},
