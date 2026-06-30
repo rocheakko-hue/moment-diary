@@ -785,6 +785,7 @@
       });
       const data = await res.json();
       loading.style.display = 'none';
+      wrap.scrollIntoView({behavior:'smooth', block:'start'});
 
       const icons = ['🎵', '🎶', '🎸'];
       const songs = data.songs || [];
